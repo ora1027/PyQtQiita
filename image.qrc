@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>data/gopher.png</file>
+        <file>StockPrice.qml</file>
     </qresource>
 </RCC>

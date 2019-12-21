@@ -41,7 +41,6 @@ class MainWindow(QMainWindow):
         openFile = QAction('&File', self)
         openFile.triggered.connect(self.show_file_dialog)
 
-        # メニューバー作成
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&Menu')
         fileMenu.addAction(openFile)
