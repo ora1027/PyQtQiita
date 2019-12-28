@@ -1,115 +1,3 @@
-#import sys
-
-#from PyQt5.QtWidgets import *
-#from PyQt5.QtCore import QTimer
-
-#from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-#from matplotlib.figure import Figure
-#import matplotlib.pyplot as plt
-
-#import random
-#import datetime
-
-
-#class plotGraph(QMainWindow):
-#    def __init__(self):
-#        super().__init__()
-#        self.title = '適当にグラフを打つよウィンドウ'
-#        self.width = 700
-#        self.height = 400
-#        self.initUI()
-
-#    def initUI(self):
-#        self.setWindowTitle(self.title)
-#        self.setGeometry(0, 0, self.width, self.height)
-
-#        self.setWindowLayout()
-#        self.statusBar()
-
-#    def setWindowLayout(self):
-
-#        ### メニューバーアクションの定義 ###
-#        exitAction = QAction('&終了', self)
-#        exitAction.setShortcut('Ctrl+Q')
-#        exitAction.setStatusTip('ウィンドウを閉じるよ')
-#        exitAction.triggered.connect(qApp.quit)
-
-#        menubar = self.menuBar()
-#        fileMenu = menubar.addMenu('ファイル')
-#        fileMenu.addAction(exitAction)
-
-#        self.w = QWidget()
-
-#        ### 実際にグラフを打つPlotCanvasクラスのインスタンスを生成します。 ###
-#        self.m = PlotCanvas(self, width=5, height=4)
-
-#        ### ボタンを作成します。 ###
-#        self.plt_button = QPushButton('グラフを打つよ', self)
-#        self.plt_button.clicked.connect(self.m.plot)
-#        self.del_button = QPushButton('グラフを消すよ', self)
-#        self.del_button.clicked.connect(self.m.clear)
-
-#        ### GridLayoutを使用します。 ###
-#        main_layout = QGridLayout()
-
-#        ### GridLayoutのどこに何を配置するのか指定します。 ###
-#        main_layout.addWidget(self.m, 0, 0, 5, 4)
-#        main_layout.addWidget(self.plt_button, 0, 11, 1, 1)
-#        main_layout.addWidget(self.del_button, 0, 11, 2, 1)
-
-#        timer = QTimer(self)
-#        timer.timeout.connect(self.getDateTime)
-#        timer.start(1000)
-
-#        self.w.setLayout(main_layout)
-#        self.setCentralWidget(self.w)
-#        self.show()
-
-#    def getDateTime(self):
-#        dt = datetime.datetime.today()
-#        dt_str = dt.strftime('%Y年%m月%d日 %H時%M分%S秒')
-#        self.statusBar().showMessage('日時' + ' ' + dt_str)
-
-
-#class PlotCanvas(FigureCanvas):
-
-#    def __init__(self, parent=None, width=5, height=4, dpi=100):
-#        self.fig = Figure(figsize=(width, height), dpi=dpi)
-#        self.axes = self.fig.add_subplot(111)
-
-#        super(PlotCanvas, self).__init__(self.fig)
-#        self.setParent(parent)
-
-#        FigureCanvas.setSizePolicy(
-#                self,
-#                QSizePolicy.Expanding,
-#                QSizePolicy.Expanding
-#                )
-#        FigureCanvas.updateGeometry(self)
-#        self.plot()
-
-#    def plot(self):
-#        self.axes.cla()
-#        self.data = [random.random() for i in range(25)]
-#        self.axes.plot(self.data, 'r-')
-#        self.axes.set_title('PyQt5 & Matplotlib Graph')
-#        self.draw()
-
-#    def clear(self):
-#        self.axes.cla()
-#        self.draw()
-
-
-#def main():
-#    app = QApplication(sys.argv)
-#    gui = plotGraph()
-#    sys.exit(app.exec_())
-
-
-#if __name__ == '__main__':
-#    main()
-
-
 import sys
 import os
 from PyQt5 import QtWidgets
@@ -120,42 +8,82 @@ import matplotlib.pyplot as plt
 
 import random
 
+import pandas as pd
+import numpy as np
+import requests
+import json
+
 class Window(QtWidgets.QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, df, parent=None):
         super().__init__(parent)
 
+        self.start = 2015
+        self.df_n225_last = df.loc[:'2015', 'Last']
+        self.df_n225_last.plot(figsize=(15, 6), color="blue")
+
         self.setWindowTitle("グラフ")
-        self.setGeometry(300,300,500,500)
+        self.setGeometry(300,300,800,500)
 
         self.figure = plt.figure()
         self.axes = self.figure.add_subplot(111)
-        # We want the axes cleared every time plot() is called
-        self.axes.hold(False)
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setParent(self)
 
-        self.canvas.move(100,20)
-
+        self.canvas.move(200,20)
 
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.toolbar.hide()
 
-        # Just some button
         self.button1 = QtWidgets.QPushButton('Plot',self)
         self.button1.clicked.connect(self.plot)
         self.button1.move(0,400)
 
+        self.lineEdit1 = QtWidgets.QLineEdit(self)
+        self.lineEdit1.setPlaceholderText("From Year")
+        self.lineEdit1.move(0, 200)
+
+        self.lineEdit2 = QtWidgets.QLineEdit(self)
+        self.lineEdit2.setPlaceholderText("To Year")
+        self.lineEdit2.move(0, 300)
+
     def plot(self):
         ''' plot some random stuff '''
+        self.calc_sma()
         data = [random.random() for i in range(25)]
-        self.axes.plot(data, '*-')
+        self.axes.plot(self.df_n225_last['SMA'], '*-')
         self.canvas.draw()
 
+
+    def calc_sma(self):
+        self.df_n225_last['SMA'] = self.df_n225_last.rolling(window=14).mean()
+
+
 if __name__ == '__main__':
+    API_TOKEN = 'ChwTtzwp4dD4JKoyaZ26'
+    QUANDL_CODE = 'CHRIS/CME_NK2'
+
+    url = f'https://www.quandl.com/api/v3/datasets/{QUANDL_CODE}/data.json?api_key={API_TOKEN}'
+    # JSONデータを受け取り、辞書型に変換する。
+    catched_response = requests.get(url)
+    json_data = catched_response.json()
+
+    # 列名リストと値リストを作成する。
+    columns = json_data['dataset_data']['column_names']
+    values = json_data['dataset_data']['data']
+
+    # データフレームを作成する。
+    df = pd.DataFrame(values, columns=columns)
+    df.Date = pd.to_datetime(df.Date)
+    df.set_index('Date', inplace=True)
+
+    df.High.interpolate(inplace=True)
+    df.Last = np.minimum(df.Last.interpolate(), df.High)
+    df.Open.fillna(df.Last, inplace=True)
+    df.Low = np.maximum(df.Low.interpolate(), df.Open)
+
     app = QtWidgets.QApplication(sys.argv)
 
-    main = Window()
-    main.setWindowTitle('Simple QTpy and MatplotLib example with Zoom/Pan')
+    main = Window(df)
     main.show()
 
     sys.exit(app.exec_())
